@@ -144,7 +144,7 @@ class ToscaComputeTest(TestCase):
                 properties:
                 #left intentionally
         '''
-        expectedprops = {'flavor': None}
+        expectedprops = {'flavor': 'm1.nano'}
         self._tosca_compute_test(
             tpl_snippet,
             expectedprops)

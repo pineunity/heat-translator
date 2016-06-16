@@ -26,6 +26,8 @@ SECTIONS = (TYPE, PROPERTIES, MEDADATA, DEPENDS_ON, UPDATE_POLICY,
             DELETION_POLICY) = \
            ('type', 'properties', 'metadata',
             'depends_on', 'update_policy', 'deletion_policy')
+
+policy_type = ['tosca.policies.Placement', 'tosca.policies.Scaling']
 log = logging.getLogger('heat-translator')
 
 
@@ -340,8 +342,8 @@ class HotResource(object):
 
         node_type = node.type_definition
         if isinstance(node_type, str) or \
-            node_type.type == "tosca.policies.Placement":
-                return operations
+            node_type.type in policy_type:
+                    return operations
 
         while True:
             type_operations = HotResource._get_interface_operations_from_type(
@@ -358,8 +360,8 @@ class HotResource(object):
     def _get_interface_operations_from_type(node_type, node, lifecycle_name):
         operations = {}
         if isinstance(node_type, str) or \
-            node_type.type == "tosca.policies.Placement":
-                return operations
+            node_type.type == policy_type:
+                    return operations
         if node_type.interfaces and lifecycle_name in node_type.interfaces:
             for name, elems in node_type.interfaces[lifecycle_name].items():
                 # ignore empty operations (only type)

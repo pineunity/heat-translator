@@ -161,54 +161,57 @@ class TranslateNodeTemplates(object):
 
         if resource.type == "OS::Nova::ServerGroup":
             resource.handle_properties(self.hot_resources)
+        elif resource.type == "OS::Heat::AutoScalingGroup":
+            resource.handle_properties(self.tosca.nodetemplates)
         else:
             resource.handle_properties()
 
     def _translate_nodetemplates(self):
-
         log.debug(_('Translating the node templates.'))
         suffix = 0
         # Copy the TOSCA graph: nodetemplate
         for node in self.nodetemplates:
-            base_type = HotResource.get_base_type(node.type_definition)
-            hot_node = TOSCA_TO_HOT_TYPE[base_type.type](node)
-            self.hot_resources.append(hot_node)
-            self.hot_lookup[node] = hot_node
+            if not self.policies or \
+                (self.policies[0].type != "tosca.policies.Scaling" or
+                 node.name not in self.policies[0].entity_tpl['targets']):
+                base_type = HotResource.get_base_type(node.type_definition)
+                hot_node = TOSCA_TO_HOT_TYPE[base_type.type](node)
+                self.hot_resources.append(hot_node)
+                self.hot_lookup[node] = hot_node
 
-            # BlockStorage Attachment is a special case,
-            # which doesn't match to Heat Resources 1 to 1.
-            if base_type.type == "tosca.nodes.Compute":
-                volume_name = None
-                requirements = node.requirements
-                if requirements:
-                    # Find the name of associated BlockStorage node
-                    for requires in requirements:
-                        for value in requires.values():
-                            if isinstance(value, dict):
-                                for node_name in value.values():
+                # BlockStorage Attachment is a special case,
+                # which doesn't match to Heat Resources 1 to 1.
+                if base_type.type == "tosca.nodes.Compute":
+                    volume_name = None
+                    requirements = node.requirements
+                    if requirements:
+                        # Find the name of associated BlockStorage node
+                        for requires in requirements:
+                            for value in requires.values():
+                                if isinstance(value, dict):
+                                    for node_name in value.values():
+                                        for n in self.nodetemplates:
+                                            if n.name == node_name:
+                                                volume_name = node_name
+                                                break
+                                else:  # unreachable code !
                                     for n in self.nodetemplates:
                                         if n.name == node_name:
                                             volume_name = node_name
                                             break
-                            else:  # unreachable code !
-                                for n in self.nodetemplates:
-                                    if n.name == node_name:
-                                        volume_name = node_name
-                                        break
 
-                    suffix = suffix + 1
-                    attachment_node = self._get_attachment_node(node,
-                                                                suffix,
-                                                                volume_name)
-                    if attachment_node:
-                        self.hot_resources.append(attachment_node)
-                for i in self.tosca.inputs:
-                    if (i.name == 'key_name' and
-                            node.get_property_value('key_name') is None):
-                        schema = {'type': i.type, 'default': i.default}
-                        value = {"get_param": "key_name"}
-                        prop = Property(i.name, value, schema)
-                        node._properties.append(prop)
+                        suffix = suffix + 1
+                        attachment_node = self._get_attachment_node(
+                            node, suffix, volume_name)
+                        if attachment_node:
+                            self.hot_resources.append(attachment_node)
+                    for i in self.tosca.inputs:
+                        if (i.name == 'key_name' and
+                                node.get_property_value('key_name') is None):
+                            schema = {'type': i.type, 'default': i.default}
+                            value = {"get_param": "key_name"}
+                            prop = Property(i.name, value, schema)
+                            node._properties.append(prop)
 
         for policy in self.policies:
             policy_type = policy.type_definition
@@ -296,7 +299,6 @@ class TranslateNodeTemplates(object):
             if inputs:
                 for name, value in six.iteritems(inputs):
                     inputs[name] = self._translate_input(value, resource)
-
         return self.hot_resources
 
     def _translate_input(self, input_value, resource):
@@ -317,7 +319,7 @@ class TranslateNodeTemplates(object):
         elif isinstance(input_value, GetAttribute):
             # for the attribute
             # get the proper target type to perform the translation
-            args = input_value.result().args
+            args = input_value.result()
             hot_target = self._find_hot_resource_for_tosca(args[0], resource)
 
             return hot_target.get_hot_attribute(args[1], args)
