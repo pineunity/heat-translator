@@ -18,13 +18,15 @@ TARGET_CLASS_NAME = 'ToscaAutoscaling'
 
 
 class ToscaAutoscaling(HotResource):
-    '''Translate TOSCA node type tosca.policies.Scaling'''
+    '''Translate TOSCA node type tosca.policies.Scaling and
+    type tosca.policies.Monitoring'''
+
 
     toscatype = 'tosca.policies.Scaling'
 
     def __init__(self, policy):
-        hot_type = "OS::Heat::AutoScalingGroup"
-        super(ToscaAutoscaling, self).__init__(policy,
+        hot_type = "OS::Heat::AutoScalingGroup"              #Whenever we call policy, it means ASG is also created
+        super(ToscaAutoscaling, self).__init__(policy,         # NoteL Policies here are just for Autoscaling
                                                type=hot_type)
         self.policy = policy
 
@@ -44,26 +46,15 @@ class ToscaAutoscaling(HotResource):
         self.properties["resources"] = props
 
     def handle_expansion(self):
+        #Call tosca.policies.monitoring
         sample = self.policy.triggers[0].trigger_tpl["condition"]
         properties = {}
         properties["auto_scaling_group_id"] = {'get_resource': self.name}
         properties["adjustment_type"] = "change_in_capacity "
         properties["scaling_adjustment"] = 1
-        prop = {}
-        prop["description"] = self.policy.description
-        prop["meter_name"] = "cpu_util"
-        prop["statistic"] = sample["method"]
-        prop["period"] = sample["period"]
-        prop["threshold"] = sample["evaluations"]
-        prop["comparison_operator"] = "gt"
-
-        ceilometer_resources = HotResource(self.nodetemplate,
-                                           type='OS::Ceilometer::Alarm',
-                                           name='cpu_alarm_high',
-                                           properties=prop)
         scaling_resources = HotResource(self.nodetemplate,
                                         type='OS::Heat::ScalingPolicy',
                                         name='scaleup_policy',
                                         properties=properties)
-        hot_resources = [ceilometer_resources, scaling_resources]
+        hot_resources = scaling_resources
         return hot_resources
