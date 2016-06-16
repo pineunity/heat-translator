@@ -40,6 +40,11 @@ class ToscaMonitoring(HotResource):
         self.properties["threshold"] = tpl["threshold"]
         self.properties["comparison_operator"] = tpl["comparison"]
         self.properties["meter_name"] = self.policy.triggers[0].trigger_tbl["metrics"]
+        alarm_actions={}
+        action = self.policy.triggers[0].trigger_tpl["alarms"]
+        alarm_actions['get_attr'] = action.values()
+        self.properties['get_attr']= alarm_actions
+
 
     def handle_expansion(self):
         sample = self.policy.triggers[0].trigger_tpl["condition"]
