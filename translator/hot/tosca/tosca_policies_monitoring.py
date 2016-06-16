@@ -23,21 +23,23 @@ class ToscaMonitoring(HotResource):
 
     toscatype = 'tosca.policies.Monitoring'
 
-    def __init__(self, nodetemplate):
+    def __init__(self, policy, alarm_action):
         hot_type = "OS::Heat::Ceilometer::Alarm"
         super(ToscaMonitoring, self).__init__(nodetemplate,
                                                type=hot_type)
-        self.nodetemplate = nodetemplate
+        self.policy = policy
+        self.alarm_action = alarm_action
 
     def handle_properties(self, resources):
-        tpl = self.nodetemplate.trigger_tpl["condition"]
+        tpl = self.policy.triggers[0].trigger_tpl["condition"] # Actually we have some triggers for VDU.. good!!!
         self.properties = {}
         self.properties["period"] = tpl["period"]
         self.properties["evaluation"] = tpl["evaluation"]
         self.properties["statistic"] = tpl["statistic"]
         self.properties["description"] = tpl["constraint"]
         self.properties["threshold"] = tpl["threshold"]
-
+        self.properties["comparison_operator"] = tpl["comparison"]
+        self.properties["meter_name"] = self.policy.triggers[0].trigger_tbl["metrics"]
 
     def handle_expansion(self):
         sample = self.policy.triggers[0].trigger_tpl["condition"]
