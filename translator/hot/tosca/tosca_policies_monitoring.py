@@ -44,30 +44,3 @@ class ToscaMonitoring(HotResource):
         action = self.policy.triggers[0].trigger_tpl["alarms"]
         alarm_actions['get_attr'] = action.values()
         self.properties['get_attr']= alarm_actions
-
-
-    def handle_expansion(self):
-        sample = self.policy.triggers[0].trigger_tpl["condition"]
-        properties = {}
-        properties["auto_scaling_group_id"] = {'get_resource': self.name}
-        properties["adjustment_type"] = "change_in_capacity "
-        properties["scaling_adjustment"] = 1
-        prop = {}
-        prop["description"] = self.policy.description
-        prop["meter_name"] = "cpu_util"
-        prop["statistic"] = sample["method"]
-        prop["period"] = sample["period"]
-        prop["threshold"] = sample["evaluations"]
-        prop["comparison_operator"] = "gt"
-
-        #Here We need to call tosca_policies_monitoring
-        ceilometer_resources = HotResource(self.nodetemplate,
-                                           type='OS::Ceilometer::Alarm',
-                                           name='cpu_alarm_high',
-                                           properties=prop)
-        scaling_resources = HotResource(self.nodetemplate,
-                                        type='OS::Heat::ScalingPolicy',
-                                        name='scaleup_policy',
-                                        properties=properties)
-        hot_resources = [ceilometer_resources, scaling_resources]
-        return hot_resources
