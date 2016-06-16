@@ -27,7 +27,7 @@ SECTIONS = (TYPE, PROPERTIES, MEDADATA, DEPENDS_ON, UPDATE_POLICY,
            ('type', 'properties', 'metadata',
             'depends_on', 'update_policy', 'deletion_policy')
 
-policy_type = ['tosca.policies.Placement', 'tosca.policies.Scaling']
+policy_type = ['tosca.policies.Placement', 'tosca.policies.Scaling', 'tosca.policies.Monitoring']
 log = logging.getLogger('heat-translator')
 
 
