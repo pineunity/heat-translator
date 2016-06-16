@@ -23,26 +23,21 @@ class ToscaMonitoring(HotResource):
 
     toscatype = 'tosca.policies.Monitoring'
 
-    def __init__(self, policy):
-        hot_type = "OS::Heat::AutoScalingGroup"
-        super(ToscaMonitoring, self).__init__(policy,
+    def __init__(self, nodetemplate):
+        hot_type = "OS::Heat::Ceilometer::Alarm"
+        super(ToscaMonitoring, self).__init__(nodetemplate,
                                                type=hot_type)
-        self.policy = policy
+        self.nodetemplate = nodetemplate
 
     def handle_properties(self, resources):
-        temp = self.policy.entity_tpl["properties"]
+        tpl = self.nodetemplate.trigger_tpl["condition"]
         self.properties = {}
-        self.properties["min_size"] = temp["min_instances"]
-        self.properties["max_size"] = temp["max_instances"]
-        self.properties["default_instances"] = temp["default_instances"]
+        self.properties["period"] = tpl["period"]
+        self.properties["evaluation"] = tpl["evaluation"]
+        self.properties["statistic"] = tpl["statistic"]
+        self.properties["description"] = tpl["constraint"]
+        self.properties["threshold"] = tpl["threshold"]
 
-        compute = ToscaCompute(resources[0])
-        compute.handle_properties()
-        props = {}
-        res = compute.properties
-        props["properties"] = res
-        props["type"] = compute.type
-        self.properties["resources"] = props
 
     def handle_expansion(self):
         sample = self.policy.triggers[0].trigger_tpl["condition"]
@@ -58,6 +53,7 @@ class ToscaMonitoring(HotResource):
         prop["threshold"] = sample["evaluations"]
         prop["comparison_operator"] = "gt"
 
+        #Here We need to call tosca_policies_monitoring
         ceilometer_resources = HotResource(self.nodetemplate,
                                            type='OS::Ceilometer::Alarm',
                                            name='cpu_alarm_high',
