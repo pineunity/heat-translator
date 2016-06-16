@@ -38,7 +38,7 @@ topology_template:
            resize_compute:
              event:
                type: tosca.events.resource.utilization
-               implement: Ceilometer
+               implementation: Ceilometer
              metrics: cpu_util
              condition:
                constraint: utilization greater_than 50%
