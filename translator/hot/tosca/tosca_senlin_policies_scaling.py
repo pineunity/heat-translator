@@ -23,7 +23,7 @@ class ToscaAutoscaling(HotResource):
     toscatype = 'tosca.policies.Scaling'
 
     def __init__(self, policy):
-        hot_type = "OS::Heat::Senlin::Cluster"
+        hot_type = "OS::Senlin::Cluster"
         super(ToscaAutoscaling, self).__init__(policy,
                                                type=hot_type)
         self.policy = policy
@@ -51,7 +51,7 @@ class ToscaAutoscaling(HotResource):
         properties["adjustment_type"] = "change_in_capacity "
         properties["scaling_adjustment"] = 1
         scaling_resources = HotResource(self.nodetemplate,
-                                        type='OS::Heat::ScalingPolicy',
+                                        type='OS::Senlin::Policy',
                                         name='scaleup_policy',
                                         properties=properties)
         hot_resources = scaling_resources
