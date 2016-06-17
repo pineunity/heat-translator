@@ -1,38 +1,79 @@
-heat_template_version: 2013-05-23
+heat_template_version: 2016-04-08
 
 description: >
-  Template for deploying servers based on policies.
+  This template demostrate how to use senlin resources to create
+  a flexible cluster.
 
 parameters: {}
 resources:
-  asg:
-    type: OS::Heat::AutoScalingGroup
+  profile:
+    type: OS::Senlin::Profile
     properties:
-      default_instances: 3
-      max_size: 10
-      min_size: 2
-      resources:
-        properties:
-          flavor: m1.medium
-          image: rhel-6.5-test-image
-          user_data_format: SOFTWARE_CONFIG
-        type: OS::Nova::Server
-  cpu_alarm_high:
-    type: OS::Ceilometer::Alarm
+      type: os.nova.server-1.0
+      properties:
+        flavor: {get_param: flavor}
+        image: {get_param: image}
+        key_name: {get_param: key_name}
+        networks:
+          - network: {get_param: network}
+
+  cluster:
+    type: OS::Senlin::Cluster
     properties:
-      comparison_operator: gt
-      description: Simple node autoscaling
-      meter_name: cpu_util
-      period: 60
-      statistic: average
-      threshold: 50
-      alarm_actions:
-        - {get_attr: [scaling_policy, ext_alarm_url]}
-  scaleup_policy:
-    type: OS::Heat::ScalingPolicy
+      desired_capacity: 1
+      profile: {get_resource: profile}
+
+  scale_in_policy:
+    type: OS::Senlin::Policy
     properties:
-      adjustment_type: change_in_capacity
-      auto_scaling_group_id:
-        get_resource: asg
-      scaling_adjustment: 1
-outputs: {}
+      type: senlin.policy.scaling-1.0
+      bindings:
+        - cluster: {get_resource: cluster}
+      properties:
+        event: CLUSTER_SCALE_IN
+        adjustment:
+          type: CHANGE_IN_CAPACITY
+          number: 1
+
+  scale_out_policy:
+    type: OS::Senlin::Policy
+    properties:
+      type: senlin.policy.scaling-1.0
+      bindings:
+        - cluster: {get_resource: cluster}
+      properties:
+        event: CLUSTER_SCALE_OUT
+        adjustment:
+          type: CHANGE_IN_CAPACITY
+          number: 1
+
+  receiver_scale_out:
+    type: OS::Senlin::Receiver
+    properties:
+      cluster: {get_resource: cluster}
+      action: CLUSTER_SCALE_OUT
+      type: webhook
+
+  receiver_scale_in:
+    type: OS::Senlin::Receiver
+    properties:
+      cluster: {get_resource: cluster}
+      action: CLUSTER_SCALE_IN
+      type: webhook
+
+outputs:
+  webhook_scale_out:
+    description: Webhook to scale out cluster.
+    value:
+      str_replace:
+        template: curl -X POST LINK
+        params:
+          LINK: {get_attr: [receiver_scale_out, channel, alarm_url]}
+
+  webhook_scale_in:
+    description: Webhook to scale in cluster.
+    value:
+      str_replace:
+        template: curl -X POST LINK
+        params:
+          LINK: {get_attr: [receiver_scale_in, channel, alarm_url]}
