@@ -57,7 +57,4 @@ class ToscaAutoscaling(HotResource):
         hot_resources = scaling_resources
         return hot_resources
 
-                                        name='scaleup_policy',
-                                        properties=properties)
-        hot_resources = [ceilometer_resources, scaling_resources]
-        return hot_resources
+    # call again Ceilometer but diferent node
