@@ -44,28 +44,19 @@ class ToscaAutoscaling(HotResource):
         self.properties["resources"] = props
 
     def handle_expansion(self):
+        #Call tosca.policies.monitoring
         sample = self.policy.triggers[0].trigger_tpl["condition"]
         properties = {}
         properties["auto_scaling_group_id"] = {'get_resource': self.name}
         properties["adjustment_type"] = "change_in_capacity "
         properties["scaling_adjustment"] = 1
-        prop = {}
-        prop["description"] = self.policy.description
-        prop["meter_name"] = "cpu_util"
-        prop["statistic"] = sample["method"]
-        prop["period"] = sample["period"]
-        prop["threshold"] = sample["evaluations"]
-        prop["comparison_operator"] = "gt"
-
-
-        # need to be change here: Actualy we should alarm information and Senlin can monitor and triger alarm by itself
-        # move out from handle_expamsion
-        ceilometer_resources = HotResource(self.nodetemplate,
-                                           type='OS::Ceilometer::Alarm',
-                                           name='cpu_alarm_high',
-                                           properties=prop)
         scaling_resources = HotResource(self.nodetemplate,
-                                        type='OS::Heat::Senlin:Policy',    # I am here
+                                        type='OS::Heat::ScalingPolicy',
+                                        name='scaleup_policy',
+                                        properties=properties)
+        hot_resources = scaling_resources
+        return hot_resources
+
                                         name='scaleup_policy',
                                         properties=properties)
         hot_resources = [ceilometer_resources, scaling_resources]
