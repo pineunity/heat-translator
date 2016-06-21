@@ -30,7 +30,7 @@ class ToscaMonitoring(HotResource):
         self.policy = policy
         self.alarm_action = alarm_action
 
-    def handle_properties(self, resources):
+    def handle_properties(self):
         tpl = self.policy.triggers[0].trigger_tpl["condition"] # Actually we have some triggers for VDU.. good!!!
         self.properties = {}
         self.properties["period"] = tpl["period"]
